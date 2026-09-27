@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sujinno 13 - VOC Alert</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f0f4f8; margin: 0; padding: 0; color: #333; }
+        .header { background: #0056b3; color: white; padding: 15px; text-align: center; font-size: 20px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .nav { display: flex; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 10; }
+        .nav button { flex: 1; padding: 15px 5px; border: none; background: none; font-size: 15px; font-weight: 600; cursor: pointer; color: #6c757d; border-bottom: 3px solid transparent; transition: 0.3s; }
+        .nav button.active { color: #0056b3; border-bottom: 3px solid #0056b3; }
+        .container { padding: 20px; max-width: 750px; margin: auto; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .date-header { text-align: center; margin-bottom: 20px; font-size: 15px; color: #495057; }
+        .date-header span { font-weight: bold; color: #0056b3; font-size: 18px; }
+
+        .alert-box { background: white; border-radius: 10px; padding: 15px 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 6px solid #ccc; }
+        .alert-box.day1 { border-left-color: #dc3545; }
+        .alert-box.day3 { border-left-color: #0056b3; }
+        .alert-title { font-weight: bold; font-size: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .alert-box.day1 .alert-title { color: #dc3545; }
+        .alert-box.day3 .alert-title { color: #0056b3; }
+        
+        .section-title { font-weight: bold; font-size: 16px; margin: 25px 0 10px 0; color: #333; display: flex; align-items: center; gap: 8px; }
+
+        .patient-row { background: white; border-radius: 8px; padding: 12px 18px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; }
+        .patient-info h4 { margin: 0 0 3px 0; font-size: 16px; color: #0056b3; }
+        .patient-info p { margin: 0; font-size: 13px; color: #6c757d; }
+        
+        .status-badge { font-size: 13px; font-weight: bold; padding: 4px 10px; border-radius: 6px; }
+        .status-day1 { background: #f8d7da; color: #721c24; }
+        .status-day3 { background: #cce5ff; color: #004085; }
+        .status-active { background: #e2edfb; color: #0056b3; }
+
+        .form-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: #495057; font-size: 14px; }
+        select, input[type="date"] { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ced4da; font-size: 16px; font-family: 'Sarabun', sans-serif; box-sizing: border-box; }
+        
+        .btn-primary { background: #0056b3; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-delete { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+        
+        .empty-text { color: #888; font-style: italic; font-size: 14px; text-align: center; padding: 8px 0; }
+        .loading { text-align: center; padding: 20px; color: #0056b3; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="header">📋 Sujinno 13 - VOC Alert</div>
+
+<div class="nav">
+    <button id="btn-dash" class="active" onclick="switchTab('dash')">📊 Dashboard แจ้งเตือน</button>
+    <button id="btn-form" onclick="switchTab('form')">📝 ลงข้อมูลผู้ป่วย</button>
+</div>
+
+<div class="container">
+    
+    <!-- DASHBOARD TAB -->
+    <div id="tab-dash" class="tab-content active">
+        <div class="date-header">
+            รายการประเมินประจำวันที่<br><span id="currentDateText">กำลังโหลด...</span>
+        </div>
+
+        <!-- ประเมิน 24 ชั่วโมงแรก -->
+        <div class="alert-box day1">
+            <div class="alert-title">🚨 ประเมิน 24 ชั่วโมงแรก (Day 1)</div>
+            <div id="list-day1"><div class="empty-text">กำลังโหลด...</div></div>
+        </div>
+
+        <!-- ประเมินวันที่ 3 -->
+        <div class="alert-box day3">
+            <div class="alert-title">📋 ประเมินวันที่ 3 (Day 3)</div>
+            <div id="list-day3"><div class="empty-text">กำลังโหลด...</div></div>
+        </div>
+
+        <!-- ผู้ป่วยกำลังพักรักษา -->
+        <div class="section-title">🏥 ผู้ป่วยกำลังพักรักษา (ยังไม่ถึงกำหนด /เลยกำหนด)</div>
+        <div id="list-active"><div class="empty-text">กำลังโหลด...</div></div>
+    </div>
+
+    <!-- FORM TAB -->
+    <div id="tab-form" class="tab-content">
+        <div class="form-card">
+            <h3 style="margin-top:0; color:#0056b3;">➕ จัดการข้อมูลผู้ป่วย</h3>
+            
+            <label>เลือกหมายเลขห้อง (Room Number):</label>
+            <select id="patientRoom">
+                <option value="">-- กรุณาเลือกห้อง 1301 ถึง 1326 --</option>
+            </select>
+            
+            <label>วันที่ Admit (วันที่รับผู้ป่วยเข้าพัก):</label>
+            <input type="date" id="patientAdmitDate">
+            
+            <p style="font-size: 13px; color: #6c757d; margin-top: -5px; margin-bottom: 20px;">
+                💡 ระบบจะคำนวณวันประเมิน 24H และ Day 3 ให้โดยอัตโนมัติ
+            </p>
+            
+            <button class="btn-primary" id="saveBtn" onclick="savePatient()">💾 บันทึก / อัปเดตข้อมูล</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwe1yEL_tNME31BH44Nuy2EXy2XQnrU4XadGgyj4nYH9wKOW4szkmBO56Hdmpfkd6VA/exec';
+
+    let patientList = [];
+
+    // เติมตัวเลือกห้อง 1301 ถึง 1326
+    const roomSelect = document.getElementById("patientRoom");
+    for (let i = 1301; i <= 1326; i++) {
+        let opt = document.createElement("option");
+        opt.value = "ห้อง " + i;
+        opt.text = "ห้อง " + i;
+        roomSelect.appendChild(opt);
+    }
+
+    document.getElementById("patientAdmitDate").valueAsDate = new Date();
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.nav button').forEach(btn => btn.classList.remove('active'));
+        
+        document.getElementById('tab-' + tabId).classList.add('active');
+        document.getElementById('btn-' + tabId).classList.add('active');
+
+        if(tabId === 'dash') fetchPatientsData();
+    }
+
+    async function fetchPatientsData() {
+        try {
+            let response = await fetch(SCRIPT_URL + "?action=get");
+            let result = await response.json();
+            if(result.status === "success") {
+                patientList = result.data;
+                renderDashboard();
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    function formatDateShort(dateStr) {
+        if(!dateStr) return '-';
+        const [y, m, d] = dateStr.split('T')[0].split('-');
+        if(!y || !m || !d) return dateStr;
+        const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+        return dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    async function savePatient() {
+        const room = document.getElementById("patientRoom").value;
+        const admitDate = document.getElementById("patientAdmitDate").value;
+
+        if(!room || !admitDate) {
+            alert("กรุณาเลือกหมายเลขห้องและวันที่ Admit ให้ครบถ้วน");
+            return;
+        }
+
+        const newId = 'pat_' + Date.now();
+        const patientData = { id: newId, room: room, admitDate: admitDate };
+
+        try {
+            document.getElementById("saveBtn").innerText = "กำลังบันทึก...";
+            document.getElementById("saveBtn").disabled = true;
+
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "add", patient: patientData })
+            });
+            
+            document.getElementById("patientRoom").value = "";
+            document.getElementById("patientAdmitDate").valueAsDate = new Date();
+            switchTab('dash');
+        } catch(e) {
+            alert("เกิดข้อผิดพลาดในการบันทึก");
+        } finally {
+            document.getElementById("saveBtn").innerText = "💾 บันทึก / อัปเดตข้อมูล";
+            document.getElementById("saveBtn").disabled = false;
+        }
+    }
+
+    function renderDashboard() {
+        const todayObj = new Date();
+        document.getElementById("currentDateText").innerText = todayObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        const todayStr = todayObj.toISOString().split('T')[0];
+
+        let htmlDay1 = "";
+        let htmlDay3 = "";
+        let htmlActive = "";
+
+        let countDay1 = 0;
+        let countDay3 = 0;
+        let countActive = 0;
+
+        patientList.forEach(p => {
+            let admitD = new Date(p.admitDate);
+            
+            let day1Date = new Date(admitD);
+            day1Date.setDate(admitD.getDate() + 1);
+            let day1Str = day1Date.toISOString().split('T')[0];
+
+            let day3Date = new Date(admitD);
+            day3Date.setDate(admitD.getDate() + 3);
+            let day3Str = day3Date.toISOString().split('T')[0];
+
+            if (todayStr === day1Str) {
+                countDay1++;
+                htmlDay1 += `
+                    <div class="patient-row">
+                        <div class="patient-info">
+                            <h4>${p.room}</h4>
+                            <p>Admit: ${formatDateShort(p.admitDate)}</p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span class="status-badge status-day1">ถึงกำหนดประเมิน 24H วันนี้</span>
+                            <button class="btn-delete" onclick="deletePatient('${p.id}')">ลบ</button>
+                        </div>
+                    </div>`;
+            } else if (todayStr === day3Str) {
+                countDay3++;
+                htmlDay3 += `
+                    <div class="patient-row">
+                        <div class="patient-info">
+                            <h4>${p.room}</h4>
+                            <p>Admit: ${formatDateShort(p.admitDate)}</p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span class="status-badge status-day3">ถึงกำหนดประเมิน Day 3 วันนี้</span>
+                            <button class="btn-delete" onclick="deletePatient('${p.id}')">ลบ</button>
+                        </div>
+                    </div>`;
+            } else {
+                countActive++;
+                htmlActive += `
+                    <div class="patient-row">
+                        <div class="patient-info">
+                            <h4>${p.room}</h4>
+                            <p>Admit: ${formatDateShort(p.admitDate)}</p>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span class="status-badge status-active">กำลังพักรักษา</span>
+                            <button class="btn-delete" onclick="deletePatient('${p.id}')">ลบ</button>
+                        </div>
+                    </div>`;
+            }
+        });
+
+        document.getElementById("list-day1").innerHTML = countDay1 > 0 ? htmlDay1 : `<div class="empty-text">- ไม่มีผู้ป่วยที่ต้องประเมินในกลุ่มนี้ -</div>`;
+        document.getElementById("list-day3").innerHTML = countDay3 > 0 ? htmlDay3 : `<div class="empty-text">- ไม่มีผู้ป่วยที่ต้องประเมินในกลุ่มนี้ -</div>`;
+        document.getElementById("list-active").innerHTML = countActive > 0 ? htmlActive : `<div class="empty-text">- ไม่มีผู้ป่วยในระบบ -</div>`;
+    }
+
+    async function deletePatient(id) {
+        if(confirm("ต้องการลบข้อมูลผู้ป่วยนี้ใช่หรือไม่?")) {
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: "delete", id: id })
+                });
+                await fetchPatientsData();
+            } catch(e) {
+                alert("เกิดข้อผิดพลาดในการลบข้อมูล");
+            }
+        }
+    }
+
+    fetchPatientsData();
+</script>
+
+</body>
+</html>
